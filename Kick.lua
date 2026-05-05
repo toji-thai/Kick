@@ -4,8 +4,28 @@ local character = player.Character or player.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart")
 local humanoid = character:WaitForChild("Humanoid")
 
-local isRunning = false
 local startPos = CFrame.new(696, 3, 240)
+local fileName = "SystemSettings.json"
+local HttpService = game:GetService("HttpService")
+
+local function saveConfig(data)
+    if writefile then
+        writefile(fileName, HttpService:JSONEncode(data))
+    end
+end
+
+local function loadConfig()
+    if isfile and isfile(fileName) then
+        local success, result = pcall(function()
+            return HttpService:JSONDecode(readfile(fileName))
+        end)
+        if success then return result end
+    end
+    return {isRunning = false} -- Default if no file found
+end
+
+local config = loadConfig()
+local isRunning = config.isRunning
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ToggleSystemGui"
@@ -15,15 +35,12 @@ screenGui.ResetOnSpawn = false
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0, 150, 0, 50)
 toggleBtn.Position = UDim2.new(0, 50, 1, -100)
-toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
 toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleBtn.Text = "SYSTEM: OFF"
 toggleBtn.Font = Enum.Font.SourceSansBold
 toggleBtn.TextSize = 20
 toggleBtn.Parent = screenGui
 
-toggleBtn.MouseButton1Click:Connect(function()
-    isRunning = not isRunning
+local function updateUI()
     if isRunning then
         toggleBtn.Text = "SYSTEM: ON"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 255, 50)
@@ -34,12 +51,19 @@ toggleBtn.MouseButton1Click:Connect(function()
             humanoid:Move(Vector3.new(0, 0, 0), true)
         end
     end
+end
+
+updateUI()
+
+toggleBtn.MouseButton1Click:Connect(function()
+    isRunning = not isRunning
+    saveConfig({isRunning = isRunning})
+    updateUI()
 end)
 
 RunService.RenderStepped:Connect(function()
     if isRunning and humanoid and rootPart then
         humanoid:Move(Vector3.new(0, 0, -1), true)
-        
         local currentPos = rootPart.Position
         if currentPos.X > 708 or currentPos.Z > 290 then
             rootPart.CFrame = startPos
